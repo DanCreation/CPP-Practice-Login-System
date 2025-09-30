@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <format>
+#include <unordered_map>
 
 using namespace std;
 
@@ -22,7 +23,8 @@ class account
         }
 };
 
-vector<account> accounts{};
+unordered_map<string, string> accounts{};
+//vector<account> accounts{};
 
 void createAccount()
 {
@@ -34,41 +36,53 @@ void createAccount()
     cout << "Password: ";
     cin >> password;
 
-    accounts.push_back(account(username, password));
+    accounts[username] = password;
+    //accounts.push_back(account(username, password));
     cout << "\nAccount Created" << endl;
-    accounts.back().display();
+    //accounts.back().display();
     cout << endl;
 }
 
 void logIn()
 {
-    cout << "\nLOG IN: " << endl;
-    string username{}, password{};
-    cout << "Username: ";
-    cin >> username;
-    bool nameExists{ false };
-    for (int i{}; i < accounts.size(); i++)
+    bool loggingIn{ true };
+    while (loggingIn)
     {
-        if (username == accounts[i].getUsername())
+        cout << "\nLOG IN: " << endl;
+        string username{}, password{};
+        cout << "Username: ";
+        cin >> username;
+        if (accounts.find(username) != accounts.end())
         {
-            nameExists = true;
             cout << "Password: ";
             cin >> password;
-            if (password == accounts[i].getPassword())
-            {
-                cout << "Log in successful\n" << endl;
-            }
-            else
-            {
-                cout << "Log in failed\n" << endl;
-            }
-            break;
         }
+        //bool nameExists{ false };
+        /*for (int i{}; i < accounts.size(); i++)
+        {
+            if (username == accounts[i].getUsername())
+            {
+                nameExists = true;
+                cout << "Password: ";
+                cin >> password;
+                if (password == accounts[i].getPassword())
+                {
+                    cout << "Log in successful\n" << endl;
+                    loggingIn = false;
+                }
+                else
+                {
+                    cout << "Log in failed\n" << endl;
+                }
+                break;
+            }
+        }*/
+        /*if (nameExists == false)
+        {
+            cout << "Incorrect username\n" << endl;
+        }*/
     }
-    if (nameExists == false)
-    {
-        cout << "Incorrect username\n" << endl;
-    }
+    
 }
 
 void welcome()
