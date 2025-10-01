@@ -52,11 +52,28 @@ void logIn()
         string username{}, password{};
         cout << "Username: ";
         cin >> username;
-        if (accounts.find(username) != accounts.end())
+
+        auto it = accounts.find(username);
+
+        if (it != accounts.end())
         {
             cout << "Password: ";
             cin >> password;
+            if (it->second == password)
+            {
+                cout << "Log in successful\n" << endl;
+                break;
+            }
+            else
+            {
+                cout << "Incorrect password" << endl;
+            }
         }
+        else 
+        {
+            cout << "Incorrect Username" << endl;
+        }
+
         //bool nameExists{ false };
         /*for (int i{}; i < accounts.size(); i++)
         {
