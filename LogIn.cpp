@@ -1,6 +1,5 @@
 #include <iostream>
 #include <string>
-#include <vector>
 #include <format>
 #include <unordered_map>
 
@@ -24,7 +23,6 @@ class account
 };
 
 unordered_map<string, string> accounts{};
-//vector<account> accounts{};
 
 void createAccount()
 {
@@ -37,21 +35,26 @@ void createAccount()
     cin >> password;
 
     accounts[username] = password;
-    //accounts.push_back(account(username, password));
     cout << "\nAccount Created" << endl;
-    //accounts.back().display();
     cout << endl;
 }
 
 void logIn()
 {
-    bool loggingIn{ true };
-    while (loggingIn)
+    int counter{};
+
+    while (true)
     {
-        cout << "\nLOG IN: " << endl;
+        cout << "\nLOG IN: \nTo exit the log in page type 'q' in Username" << endl;
         string username{}, password{};
         cout << "Username: ";
         cin >> username;
+
+        if (username == "q" || username == "Q")
+        {
+            cout << endl;
+            return;
+        }
 
         auto it = accounts.find(username);
 
@@ -62,7 +65,7 @@ void logIn()
             if (it->second == password)
             {
                 cout << "Log in successful\n" << endl;
-                break;
+                return;
             }
             else
             {
@@ -74,32 +77,13 @@ void logIn()
             cout << "Incorrect Username" << endl;
         }
 
-        //bool nameExists{ false };
-        /*for (int i{}; i < accounts.size(); i++)
+        counter++;
+        if (counter >= 3)
         {
-            if (username == accounts[i].getUsername())
-            {
-                nameExists = true;
-                cout << "Password: ";
-                cin >> password;
-                if (password == accounts[i].getPassword())
-                {
-                    cout << "Log in successful\n" << endl;
-                    loggingIn = false;
-                }
-                else
-                {
-                    cout << "Log in failed\n" << endl;
-                }
-                break;
-            }
-        }*/
-        /*if (nameExists == false)
-        {
-            cout << "Incorrect username\n" << endl;
-        }*/
+            cout << "Too many failed attempts\n" << endl;
+            break;
+        }
     }
-    
 }
 
 void welcome()
@@ -131,8 +115,6 @@ void welcome()
             break;
         }
     }
-   
-        
 }
 
 int main()
