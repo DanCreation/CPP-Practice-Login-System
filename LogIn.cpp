@@ -2,8 +2,34 @@
 #include <string>
 #include <format>
 #include <unordered_map>
+#include <conio.h>
 
 using namespace std;
+
+string getPassword()
+{
+    string password{};
+    char ch{};
+
+    while ((ch = _getch()) != '\r')
+    {
+        if (ch == '\b')
+        {
+            if (!password.empty())
+            {
+                password.pop_back();
+                cout << "\b \b";
+            }
+        }
+        else
+        {
+            password.push_back(ch);
+            cout << '*';
+        }
+    }
+    cout << endl;
+    return password;
+}
 
 class account
 {
@@ -32,7 +58,7 @@ void createAccount()
     cout << "Username: ";
     cin >> username;
     cout << "Password: ";
-    cin >> password;
+    password = getPassword();
 
     accounts[username] = password;
     cout << "\nAccount Created" << endl;
@@ -61,7 +87,7 @@ void logIn()
         if (it != accounts.end())
         {
             cout << "Password: ";
-            cin >> password;
+            password = getPassword();
             if (it->second == password)
             {
                 cout << "Log in successful\n" << endl;
