@@ -48,21 +48,34 @@ class account
         }
 };
 
-unordered_map<string, string> accounts{};
+unordered_map<string, account> accounts{};
 
 void createAccount()
 {
-    string username{}, password{};
-
-    cout << "\nCREATE ACCOUNT: " << endl;
-    cout << "Username: ";
-    cin >> username;
-    cout << "Password: ";
-    password = getPassword();
-
-    accounts[username] = password;
-    cout << "\nAccount Created" << endl;
-    cout << endl;
+    string username{}, password1{}, password2{};
+    while (true)
+    {
+        cout << "\nCREATE ACCOUNT: " << endl;
+        cout << "Username: ";
+        cin >> username;
+        cout << "Password: ";
+        password1 = getPassword();
+        cout << "Confirm Password: ";
+        password2 = getPassword();
+        if (password1 == password2)
+        {
+            accounts.emplace(username, account(username, password1));
+            cout << "\nAccount Created" << endl;
+            cout << endl;
+            return;
+        }
+        else
+        {
+            cout << "Passwords do not match" << endl;
+        }
+    }
+    
+    
 }
 
 void logIn()
@@ -88,9 +101,9 @@ void logIn()
         {
             cout << "Password: ";
             password = getPassword();
-            if (it->second == password)
+            if (it->second.getPassword() == password)
             {
-                cout << "Log in successful\n" << endl;
+                cout << "\nLog in successful\n" << endl;
                 return;
             }
             else
@@ -133,11 +146,11 @@ void welcome()
             logIn();
             break;
         case 3:
-            cout << "Exited" << endl;
+            cout << "\nExited" << endl;
             online = false;
             break;
         default:
-            cout << "Nothing" << endl;
+            cout << "Invalid input\n" << endl;
             break;
         }
     }
