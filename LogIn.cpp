@@ -33,22 +33,89 @@ string getPassword()
 
 class account
 {
-    private:
-        string username;
-        string password;
-    public:
-        account(string a, string b) : username(a), password(b) {}
+private:
+    string username;
+    string password;
+public:
+    account(string a, string b) : username(a), password(b) {}
 
-        string getUsername() const {return username;}
-        string getPassword() const {return password;}
+    string getUsername() const { return username; }
+    string getPassword() const { return password; }
 
-        void display() const
-        {
-            cout << format("Username: {}\nPassword: {}", username, password) << endl;
-        }
+    void display() const
+    {
+        cout << format("Username: {}\nPassword: {}", username, password) << endl;
+    }
 };
 
 unordered_map<string, account> accounts{};
+
+void loggedIn(string name)
+{
+    while (true)
+    {
+        string username{ name };
+
+        cout << format("Welcome {}", name) << endl;
+        cout << "1. Add Journal Entry\n2. Update Journal Entry\n3. Delete Journal Entry\n"
+            "4. Change Password\n5. Log Out\nInput: ";
+
+        int input{};
+        cin >> input;
+
+        switch (input)
+        {
+        case 1:
+            cout << "Added Entry\n" << endl;
+            break;
+        case 2:
+            cout << "Updated Entry\n" << endl;
+            break;
+        case 3:
+            cout << "Deleted Entry\n" << endl;
+            break;
+        case 4:
+            while (true)
+            {
+                cout << "\nOld Password: ";
+                auto it = accounts.find(username);
+                string oldPassword = getPassword();
+                if (oldPassword == it->second.getPassword())
+                {
+                    while (true)
+                    {
+                        cout << "New Password: ";
+                        string newPassword1 = getPassword();
+                        cout << "Confirm New Password: ";
+                        string newPassword2 = getPassword();
+                        if (newPassword1 == newPassword2)
+                        {
+                            it->second = account(username, newPassword1);
+                            cout << "\nYour Password Has Been Changed\n" << endl;
+                            break;
+                        }
+                        else
+                        {
+                            cout << "Passwords do not match" << endl;
+                        }
+                    }
+                    break;
+                }
+                else
+                {
+                    cout << "Passwords do not match" << endl;
+                }
+            }
+            break;
+        case 5:
+            cout << "Logged Out\n" << endl;
+            return;
+        default:
+            cout << "Invalid Input\n" << endl;
+            break;
+        }
+    }
+}
 
 void createAccount()
 {
@@ -58,21 +125,32 @@ void createAccount()
         cout << "\nCREATE ACCOUNT: " << endl;
         cout << "Username: ";
         cin >> username;
-        cout << "Password: ";
-        password1 = getPassword();
-        cout << "Confirm Password: ";
-        password2 = getPassword();
-        if (password1 == password2)
+
+        auto it = accounts.find(username);
+
+        if (it == accounts.end())
         {
-            accounts.emplace(username, account(username, password1));
-            cout << "\nAccount Created" << endl;
-            cout << endl;
-            return;
+            cout << "Password: ";
+            password1 = getPassword();
+            cout << "Confirm Password: ";
+            password2 = getPassword();
+            if (password1 == password2)
+            {
+                accounts.emplace(username, account(username, password1));
+                cout << "\nAccount Created" << endl;
+                cout << endl;
+                return;
+            }
+            else
+            {
+                cout << "Passwords do not match" << endl;
+            }
         }
         else
         {
-            cout << "Passwords do not match" << endl;
+            cout << "Username already exists" << endl;
         }
+        
     }
     
     
@@ -103,7 +181,8 @@ void logIn()
             password = getPassword();
             if (it->second.getPassword() == password)
             {
-                cout << "\nLog in successful\n" << endl;
+                cout << endl;
+                loggedIn(username);
                 return;
             }
             else
@@ -127,12 +206,10 @@ void logIn()
 
 void welcome()
 {
-    bool online{true};
-
-    while (online)
+    while (true)
     {
         cout << "Welcome to the beta test!" << endl;
-        cout << "1. Create an account\n2. Log In\n3. Exit\nInput: ";
+        cout << "1. Create An Account\n2. Log In\n3. Exit\nInput: ";
 
         int input{};
         cin >> input;
@@ -147,8 +224,7 @@ void welcome()
             break;
         case 3:
             cout << "\nExited" << endl;
-            online = false;
-            break;
+            return;
         default:
             cout << "Invalid input\n" << endl;
             break;
