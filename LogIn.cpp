@@ -3,8 +3,11 @@
 #include <format>
 #include <unordered_map>
 #include <conio.h>
+#include <fstream>
+#include <filesystem>
 
 using namespace std;
+namespace fs = filesystem;
 
 string getPassword()
 {
@@ -41,6 +44,11 @@ public:
 
     string getUsername() const { return username; }
     string getPassword() const { return password; }
+   
+    void setPassword(const string& newPass)
+    {
+        password = newPass;
+    }
 
     void display() const
     {
@@ -49,6 +57,74 @@ public:
 };
 
 unordered_map<string, account> accounts{};
+
+void saveAccounts()
+{
+    ofstream outfile("accounts.txt");
+
+    for (const auto& pair : accounts)
+    {
+        outfile << pair.second.getUsername() << " " << pair.second.getPassword() << endl;
+    }
+
+    outfile.close();
+}
+
+void loadAccounts()
+{
+    ifstream infile("accounts.txt");
+    if (!infile)
+    {
+        cout << "No saved accounts found" << endl;
+        return;
+    }
+
+    string username{}, password{};
+
+    while (infile >> username >> password)
+    {
+        accounts.emplace(username, account(username, password));
+    }
+
+    infile.close();
+}
+
+void newDirectory(const string& directoryName)
+{
+    fs::path directoryPath = format("{}'s folder", directoryName);
+
+    if (!fs::exists(directoryPath))
+    {
+        fs::create_directory(directoryPath);
+    }
+}
+
+void newJournal()
+{
+    string fileName{}, line{};
+
+    cin.ignore();
+
+    cout << "Entry Title: ";
+    getline(cin, fileName);
+
+    for (auto& c : fileName)
+    {
+        if (c == ' ') c = '_';
+    }
+
+    cout << "Journal Entry (Type 'END' on a new line to finish):\n";
+    
+    ofstream outfile(format("{}.txt", fileName));
+    while (true)
+    {
+        getline(cin, line);
+        if (line == "END") break;
+        outfile << line << endl;
+    }
+
+    outfile.close();
+}
 
 void loggedIn(string name)
 {
@@ -66,6 +142,7 @@ void loggedIn(string name)
         switch (input)
         {
         case 1:
+            newJournal();
             cout << "Added Entry\n" << endl;
             break;
         case 2:
@@ -77,10 +154,15 @@ void loggedIn(string name)
         case 4:
             while (true)
             {
+                cout << "To cancel type 'q'" << endl;
                 cout << "\nOld Password: ";
                 auto it = accounts.find(username);
                 string oldPassword = getPassword();
-                if (oldPassword == it->second.getPassword())
+                if (oldPassword == "q" || oldPassword == "Q")
+                {
+                    break;
+                }
+                else if (oldPassword == it->second.getPassword())
                 {
                     while (true)
                     {
@@ -90,8 +172,9 @@ void loggedIn(string name)
                         string newPassword2 = getPassword();
                         if (newPassword1 == newPassword2)
                         {
-                            it->second = account(username, newPassword1);
+                            it->second.setPassword(newPassword1);
                             cout << "\nYour Password Has Been Changed\n" << endl;
+                            saveAccounts();
                             break;
                         }
                         else
@@ -139,6 +222,8 @@ void createAccount()
                 accounts.emplace(username, account(username, password1));
                 cout << "\nAccount Created" << endl;
                 cout << endl;
+                saveAccounts();
+                newDirectory(username);
                 return;
             }
             else
@@ -206,6 +291,8 @@ void logIn()
 
 void welcome()
 {
+    loadAccounts();
+
     while (true)
     {
         cout << "Welcome to the beta test!" << endl;
