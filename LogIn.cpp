@@ -99,9 +99,10 @@ void newDirectory(const string& directoryName)
     }
 }
 
-void newJournal()
+void newJournal(const string& username)
 {
     string fileName{}, line{};
+    fs::path userPath = (format("{}'s folder", username));
 
     cin.ignore();
 
@@ -115,7 +116,7 @@ void newJournal()
 
     cout << "Journal Entry (Type 'END' on a new line to finish):\n";
     
-    ofstream outfile(format("{}.txt", fileName));
+    ofstream outfile(userPath / (format("{}.txt", fileName)));
     while (true)
     {
         getline(cin, line);
@@ -124,6 +125,120 @@ void newJournal()
     }
 
     outfile.close();
+    cout << "Entry added\n" << endl;
+}
+
+void viewJournal(const string& username)
+{
+    fs::path userPath = format("{}'s folder", username);
+    vector<string> entries{};
+
+    for (const auto& entry : fs::directory_iterator(userPath))
+    {
+        if (entry.path().extension() == ".txt")
+        {
+            
+            entries.push_back(entry.path().stem().string());
+        }
+    }
+
+    for (size_t i = 0; i < entries.size(); ++i)
+    {
+        for (auto& c : entries[i])
+        {
+            if (c == '_') c = ' ';
+        }
+        cout << i + 1 << ". " << entries[i] << endl;
+    }
+
+    int choice{};
+    cout << "Select an entry to open (0 to cancel): ";
+    cin >> choice;
+
+    if (choice <= 0 || choice > entries.size()) return;
+
+    string fileToOpen = entries[choice - 1];
+    for (auto& c : fileToOpen)
+    {
+        if (c == ' ') c = '_';
+    }
+    ifstream infile(userPath / format("{}.txt", fileToOpen));
+
+    cout << "\nCurrent content:\n";
+    string line{};
+    while (getline(infile, line))
+    {
+        cout << line << endl;
+    }
+    infile.close();
+
+    cout << "\nWould you like to edit this entry? (y/n): ";
+    char editChoice{};
+    cin >> editChoice;
+    cin.ignore();
+
+    if (editChoice == 'y' || editChoice == 'Y')
+    {
+        ofstream outfile(userPath / format("{}.txt", fileToOpen));
+        cout << "Enter new content (Type 'END' to finish):\n";
+        while (true)
+        {
+            getline(cin, line);
+            if (line == "END") break;
+            outfile << line << endl;
+        }
+        outfile.close();
+        cout << "Entry updated.\n" << endl;
+    }
+}
+
+void deleteJournal(const string& username)
+{
+    fs::path userPath = format("{}'s folder", username);
+    vector<string> entries{};
+
+    for (const auto& entry : fs::directory_iterator(userPath))
+    {
+        if (entry.path().extension() == ".txt")
+        {
+
+            entries.push_back(entry.path().stem().string());
+        }
+    }
+
+    for (size_t i = 0; i < entries.size(); ++i)
+    {
+        for (auto& c : entries[i])
+        {
+            if (c == '_') c = ' ';
+        }
+        cout << i + 1 << ". " << entries[i] << endl;
+    }
+
+    int choice{};
+    cout << "Select an entry to delete (0 to cancel): ";
+    cin >> choice;
+
+    if (choice <= 0 || choice > entries.size()) return;
+
+    string fileToDelete = entries[choice - 1];
+    for (auto& c : fileToDelete)
+    {
+        if (c == ' ') c = '_';
+    }
+    ifstream infile(userPath / format("{}.txt", fileToDelete));
+    infile.close();
+
+    cout << "\nAre you sure? (y/n): ";
+    char editChoice{};
+    cin >> editChoice;
+    cin.ignore();
+
+    if (editChoice == 'y' || editChoice == 'Y')
+    {
+        fs::remove(userPath / format("{}.txt", fileToDelete));
+        cout << "Entry deleted.\n" << endl;
+    }
 }
 
 void loggedIn(string name)
@@ -133,7 +248,7 @@ void loggedIn(string name)
         string username{ name };
 
         cout << format("Welcome {}", name) << endl;
-        cout << "1. Add Journal Entry\n2. Update Journal Entry\n3. Delete Journal Entry\n"
+        cout << "1. Add Journal Entry\n2. View Journal Entry\n3. Delete Journal Entry\n"
             "4. Change Password\n5. Log Out\nInput: ";
 
         int input{};
@@ -142,14 +257,13 @@ void loggedIn(string name)
         switch (input)
         {
         case 1:
-            newJournal();
-            cout << "Added Entry\n" << endl;
+            newJournal(username);
             break;
         case 2:
-            cout << "Updated Entry\n" << endl;
+            viewJournal(username);
             break;
         case 3:
-            cout << "Deleted Entry\n" << endl;
+            deleteJournal(username);
             break;
         case 4:
             while (true)
