@@ -9,6 +9,8 @@
 using namespace std;
 namespace fs = filesystem;
 
+enum class journalAction { open, remove };
+
 string getPassword()
 {
     string password{};
@@ -99,24 +101,28 @@ void newDirectory(const string& directoryName)
     }
 }
 
+void sanitiseFilename(string& name, bool toFile)
+{
+    for (auto& c : name)
+        if (toFile ? c == ' ' : c == '_')
+            c = toFile ? '_' : ' ';
+}
+
 void newJournal(const string& username)
 {
-    string fileName{}, line{};
+    string filename{}, line{};
     fs::path userPath = (format("{}'s folder", username));
 
     cin.ignore();
 
     cout << "Entry Title: ";
-    getline(cin, fileName);
+    getline(cin, filename);
 
-    for (auto& c : fileName)
-    {
-        if (c == ' ') c = '_';
-    }
+    sanitiseFilename(filename, true);
 
     cout << "Journal Entry (Type 'END' on a new line to finish):\n";
     
-    ofstream outfile(userPath / (format("{}.txt", fileName)));
+    ofstream outfile(userPath / (format("{}.txt", filename)));
     while (true)
     {
         getline(cin, line);
@@ -128,7 +134,7 @@ void newJournal(const string& username)
     cout << "Entry added\n" << endl;
 }
 
-void viewJournal(const string& username)
+void getJournalEntries(const string& username, journalAction action)
 {
     fs::path userPath = format("{}'s folder", username);
     vector<string> entries{};
@@ -137,108 +143,84 @@ void viewJournal(const string& username)
     {
         if (entry.path().extension() == ".txt")
         {
-            
             entries.push_back(entry.path().stem().string());
         }
     }
 
     for (size_t i = 0; i < entries.size(); ++i)
     {
-        for (auto& c : entries[i])
-        {
-            if (c == '_') c = ' ';
-        }
+        sanitiseFilename(entries[i], false);
+
         cout << i + 1 << ". " << entries[i] << endl;
     }
 
     int choice{};
-    cout << "Select an entry to open (0 to cancel): ";
+    cout << ((action == journalAction::open)
+        ? "Select an entry to open (0 to cancel): "
+        : "Select an entry to delete (0 to cancel): ");
     cin >> choice;
 
     if (choice <= 0 || choice > entries.size()) return;
 
-    string fileToOpen = entries[choice - 1];
-    for (auto& c : fileToOpen)
-    {
-        if (c == ' ') c = '_';
-    }
-    ifstream infile(userPath / format("{}.txt", fileToOpen));
+    string filename = entries[choice - 1];
 
-    cout << "\nCurrent content:\n";
-    string line{};
-    while (getline(infile, line))
-    {
-        cout << line << endl;
-    }
-    infile.close();
+    sanitiseFilename(filename, true);
 
-    cout << "\nWould you like to edit this entry? (y/n): ";
-    char editChoice{};
-    cin >> editChoice;
-    cin.ignore();
+    fs::path filePath = userPath / format("{}.txt", filename);
 
-    if (editChoice == 'y' || editChoice == 'Y')
+    if (action == journalAction::open)
     {
-        ofstream outfile(userPath / format("{}.txt", fileToOpen));
-        cout << "Enter new content (Type 'END' to finish):\n";
-        while (true)
+        ifstream infile(filePath);
+        cout << "\nCurrent content:\n";
+        string line{};
+        while (getline(infile, line))
         {
-            getline(cin, line);
-            if (line == "END") break;
-            outfile << line << endl;
+            cout << line << endl;
         }
-        outfile.close();
-        cout << "Entry updated.\n" << endl;
+        infile.close();
+
+        cout << "\nWould you like to edit this entry? (y/n): ";
+        char editChoice{};
+        cin >> editChoice;
+        cin.ignore();
+
+        if (editChoice == 'y' || editChoice == 'Y')
+        {
+            ofstream outfile(filePath);
+            cout << "Enter new content (Type 'END' to finish):\n";
+            while (true)
+            {
+                getline(cin, line);
+                if (line == "END") break;
+                outfile << line << endl;
+            }
+            outfile.close();
+            cout << "Entry updated.\n" << endl;
+        }
     }
+    else if (action == journalAction::remove)
+    {
+        cout << "\nAre you sure you want to delete this entry? (y/n): ";
+        char confirm{};
+        cin >> confirm;
+        cin.ignore();
+
+        if (confirm == 'y' || confirm == 'Y')
+        {
+            fs::remove(filePath);
+            cout << "Entry deleted.\n" << endl;
+        }
+    }
+}
+
+void viewJournal(const string& username)
+{
+    getJournalEntries(username, journalAction::open);
 }
 
 void deleteJournal(const string& username)
 {
-    fs::path userPath = format("{}'s folder", username);
-    vector<string> entries{};
-
-    for (const auto& entry : fs::directory_iterator(userPath))
-    {
-        if (entry.path().extension() == ".txt")
-        {
-
-            entries.push_back(entry.path().stem().string());
-        }
-    }
-
-    for (size_t i = 0; i < entries.size(); ++i)
-    {
-        for (auto& c : entries[i])
-        {
-            if (c == '_') c = ' ';
-        }
-        cout << i + 1 << ". " << entries[i] << endl;
-    }
-
-    int choice{};
-    cout << "Select an entry to delete (0 to cancel): ";
-    cin >> choice;
-
-    if (choice <= 0 || choice > entries.size()) return;
-
-    string fileToDelete = entries[choice - 1];
-    for (auto& c : fileToDelete)
-    {
-        if (c == ' ') c = '_';
-    }
-    ifstream infile(userPath / format("{}.txt", fileToDelete));
-    infile.close();
-
-    cout << "\nAre you sure? (y/n): ";
-    char editChoice{};
-    cin >> editChoice;
-    cin.ignore();
-
-    if (editChoice == 'y' || editChoice == 'Y')
-    {
-        fs::remove(userPath / format("{}.txt", fileToDelete));
-        cout << "Entry deleted.\n" << endl;
-    }
+    getJournalEntries(username, journalAction::remove);
 }
 
 void loggedIn(string name)
@@ -349,10 +331,7 @@ void createAccount()
         {
             cout << "Username already exists" << endl;
         }
-        
     }
-    
-    
 }
 
 void logIn()
