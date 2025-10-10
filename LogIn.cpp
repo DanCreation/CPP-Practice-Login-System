@@ -110,6 +110,7 @@ void sanitiseFilename(string& name, bool toFile)
 
 void newJournal(const string& username)
 {
+    cout << endl;
     string filename{}, line{};
     fs::path userPath = (format("{}'s folder", username));
 
@@ -136,6 +137,7 @@ void newJournal(const string& username)
 
 void getJournalEntries(const string& username, journalAction action)
 {
+    cout << endl;
     fs::path userPath = format("{}'s folder", username);
     vector<string> entries{};
 
@@ -159,11 +161,12 @@ void getJournalEntries(const string& username, journalAction action)
         ? "Select an entry to open (0 to cancel): "
         : "Select an entry to delete (0 to cancel): ");
     cin >> choice;
+    cout << endl;
 
     if (choice <= 0 || choice > entries.size()) return;
 
-    string filename = entries[choice - 1];
-
+    string displayName = entries[choice - 1];
+    string filename = displayName;
     sanitiseFilename(filename, true);
 
     fs::path filePath = userPath / format("{}.txt", filename);
@@ -171,7 +174,7 @@ void getJournalEntries(const string& username, journalAction action)
     if (action == journalAction::open)
     {
         ifstream infile(filePath);
-        cout << "\nCurrent content:\n";
+        cout << format("{}:\n", displayName);
         string line{};
         while (getline(infile, line))
         {
@@ -182,6 +185,7 @@ void getJournalEntries(const string& username, journalAction action)
         cout << "\nWould you like to edit this entry? (y/n): ";
         char editChoice{};
         cin >> editChoice;
+        cout << endl;
         cin.ignore();
 
         if (editChoice == 'y' || editChoice == 'Y')
@@ -195,12 +199,12 @@ void getJournalEntries(const string& username, journalAction action)
                 outfile << line << endl;
             }
             outfile.close();
-            cout << "Entry updated.\n" << endl;
+            cout << "\nEntry updated.\n" << endl;
         }
     }
     else if (action == journalAction::remove)
     {
-        cout << "\nAre you sure you want to delete this entry? (y/n): ";
+        cout << "Are you sure you want to delete this entry? (y/n): ";
         char confirm{};
         cin >> confirm;
         cin.ignore();
@@ -208,7 +212,7 @@ void getJournalEntries(const string& username, journalAction action)
         if (confirm == 'y' || confirm == 'Y')
         {
             fs::remove(filePath);
-            cout << "Entry deleted.\n" << endl;
+            cout << "\nEntry deleted.\n" << endl;
         }
     }
 }
@@ -223,6 +227,47 @@ void deleteJournal(const string& username)
     getJournalEntries(username, journalAction::remove);
 }
 
+void changePassword(const string& username)
+{
+    while (true)
+    {
+        cout << "\nTo cancel type 'q'";
+        cout << "\nOld Password: ";
+        auto it = accounts.find(username);
+        string oldPassword = getPassword();
+        if (oldPassword == "q" || oldPassword == "Q")
+        {
+            break;
+        }
+        else if (oldPassword == it->second.getPassword())
+        {
+            while (true)
+            {
+                cout << "New Password: ";
+                string newPassword1 = getPassword();
+                cout << "Confirm New Password: ";
+                string newPassword2 = getPassword();
+                if (newPassword1 == newPassword2)
+                {
+                    it->second.setPassword(newPassword1);
+                    cout << "\nYour Password Has Been Changed\n" << endl;
+                    saveAccounts();
+                    break;
+                }
+                else
+                {
+                    cout << "Passwords do not match\n" << endl;
+                }
+            }
+            break;
+        }
+        else
+        {
+            cout << "Passwords do not match" << endl;
+        }
+    }
+}
+
 void loggedIn(string name)
 {
     while (true)
@@ -230,8 +275,12 @@ void loggedIn(string name)
         string username{ name };
 
         cout << format("Welcome {}", name) << endl;
-        cout << "1. Add Journal Entry\n2. View Journal Entry\n3. Delete Journal Entry\n"
-            "4. Change Password\n5. Log Out\nInput: ";
+        cout << "1. Add Journal Entry\n"
+                "2. View Journal Entry\n"
+                "3. Delete Journal Entry\n"
+                "4. Change Password\n"
+                "5. Log Out\n"
+                "Input: ";
 
         int input{};
         cin >> input;
@@ -248,43 +297,7 @@ void loggedIn(string name)
             deleteJournal(username);
             break;
         case 4:
-            while (true)
-            {
-                cout << "To cancel type 'q'" << endl;
-                cout << "\nOld Password: ";
-                auto it = accounts.find(username);
-                string oldPassword = getPassword();
-                if (oldPassword == "q" || oldPassword == "Q")
-                {
-                    break;
-                }
-                else if (oldPassword == it->second.getPassword())
-                {
-                    while (true)
-                    {
-                        cout << "New Password: ";
-                        string newPassword1 = getPassword();
-                        cout << "Confirm New Password: ";
-                        string newPassword2 = getPassword();
-                        if (newPassword1 == newPassword2)
-                        {
-                            it->second.setPassword(newPassword1);
-                            cout << "\nYour Password Has Been Changed\n" << endl;
-                            saveAccounts();
-                            break;
-                        }
-                        else
-                        {
-                            cout << "Passwords do not match" << endl;
-                        }
-                    }
-                    break;
-                }
-                else
-                {
-                    cout << "Passwords do not match" << endl;
-                }
-            }
+            changePassword(username);
             break;
         case 5:
             cout << "Logged Out\n" << endl;
@@ -389,7 +402,10 @@ void welcome()
     while (true)
     {
         cout << "Welcome to the beta test!" << endl;
-        cout << "1. Create An Account\n2. Log In\n3. Exit\nInput: ";
+        cout << "1. Create An Account\n"
+                "2. Log In\n"
+                "3. Exit\n"
+                "Input: ";
 
         int input{};
         cin >> input;
