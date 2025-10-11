@@ -66,7 +66,8 @@ void saveAccounts()
 
     for (const auto& pair : accounts)
     {
-        outfile << pair.second.getUsername() << " " << pair.second.getPassword() << endl;
+        outfile << pair.second.getUsername() << " " 
+                << pair.second.getPassword() << endl;
     }
 
     outfile.close();
@@ -116,8 +117,15 @@ void newJournal(const string& username)
 
     cin.ignore();
 
+    cout << "To cancel type 'q' in Entry Title" << endl;
     cout << "Entry Title: ";
     getline(cin, filename);
+
+    if (filename == "q" || filename == "Q")
+    {
+        cout << endl;
+        return;
+    }
 
     sanitiseFilename(filename, true);
 
@@ -149,6 +157,10 @@ void getJournalEntries(const string& username, journalAction action)
         }
     }
 
+    cout << ((action == journalAction::open)
+        ? "Select an entry to open (0 to cancel): \n"
+        : "Select an entry to delete (0 to cancel): \n");
+
     for (size_t i = 0; i < entries.size(); ++i)
     {
         sanitiseFilename(entries[i], false);
@@ -157,9 +169,7 @@ void getJournalEntries(const string& username, journalAction action)
     }
 
     int choice{};
-    cout << ((action == journalAction::open)
-        ? "Select an entry to open (0 to cancel): "
-        : "Select an entry to delete (0 to cancel): ");
+    cout << "Input: ";
     cin >> choice;
     cout << endl;
 
@@ -268,7 +278,31 @@ void changePassword(const string& username)
     }
 }
 
-void loggedIn(string name)
+int deleteAccount(const string& username)
+{
+    string choice{};
+    cout << "\nAre you sure? (y/n): ";
+    cin >> choice;
+    cout << endl;
+
+    if (choice == "n" || choice == "N") return 1;
+
+    fs::path userPath = format("{}'s folder", username);
+
+    auto it = accounts.find(username);
+
+    if (it != accounts.end())
+    {
+        fs::remove_all(userPath);
+        accounts.erase(username);
+        saveAccounts();
+        cout << "Account deleted\n" << endl;
+        return 2;
+    }
+    return 0;
+}
+
+void loggedIn(const string& name)
 {
     while (true)
     {
@@ -279,8 +313,10 @@ void loggedIn(string name)
                 "2. View Journal Entry\n"
                 "3. Delete Journal Entry\n"
                 "4. Change Password\n"
-                "5. Log Out\n"
+                "5. Delete Account\n"
+                "6. Log Out\n"
                 "Input: ";
+
 
         int input{};
         cin >> input;
@@ -300,6 +336,12 @@ void loggedIn(string name)
             changePassword(username);
             break;
         case 5:
+        {
+            int result = deleteAccount(username);
+            if (result == 1) break;
+            return;
+        }
+        case 6:
             cout << "Logged Out\n" << endl;
             return;
         default:
@@ -314,9 +356,15 @@ void createAccount()
     string username{}, password1{}, password2{};
     while (true)
     {
-        cout << "\nCREATE ACCOUNT: " << endl;
+        cout << "\nCREATE ACCOUNT:\nTo cancel type 'q' in Username" << endl;
         cout << "Username: ";
         cin >> username;
+
+        if (username == "q" || username == "Q")
+        {
+            cout << endl;
+            return;
+        }
 
         auto it = accounts.find(username);
 
@@ -353,7 +401,7 @@ void logIn()
 
     while (true)
     {
-        cout << "\nLOG IN: \nTo exit the log in page type 'q' in Username" << endl;
+        cout << "\nLOG IN:\nTo cancel type 'q' in Username" << endl;
         string username{}, password{};
         cout << "Username: ";
         cin >> username;
