@@ -9,7 +9,8 @@
 using namespace std;
 namespace fs = filesystem;
 
-enum class journalAction { open, remove };
+enum class JournalAction { Open, Remove };
+enum class DeleteResult {Cancelled, Failed, Success};
 
 string getPassword()
 {
@@ -36,6 +37,7 @@ string getPassword()
     return password;
 }
 
+
 class account
 {
 private:
@@ -58,7 +60,9 @@ public:
     }
 };
 
+
 unordered_map<string, account> accounts{};
+
 
 void saveAccounts()
 {
@@ -72,6 +76,7 @@ void saveAccounts()
 
     outfile.close();
 }
+
 
 void loadAccounts()
 {
@@ -92,6 +97,7 @@ void loadAccounts()
     infile.close();
 }
 
+
 void newDirectory(const string& directoryName)
 {
     fs::path directoryPath = format("{}'s folder", directoryName);
@@ -102,6 +108,7 @@ void newDirectory(const string& directoryName)
     }
 }
 
+
 void sanitiseFilename(string& name, bool toFile)
 {
     for (auto& c : name)
@@ -109,13 +116,14 @@ void sanitiseFilename(string& name, bool toFile)
             c = toFile ? '_' : ' ';
 }
 
+
 void newJournal(const string& username)
 {
     cout << endl;
     string filename{}, line{};
     fs::path userPath = (format("{}'s folder", username));
 
-    cin.ignore();
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
     cout << "To cancel type 'q' in Entry Title" << endl;
     cout << "Entry Title: ";
@@ -143,7 +151,8 @@ void newJournal(const string& username)
     cout << "Entry added\n" << endl;
 }
 
-void getJournalEntries(const string& username, journalAction action)
+
+void getJournalEntries(const string& username, JournalAction action)
 {
     cout << endl;
     fs::path userPath = format("{}'s folder", username);
@@ -157,7 +166,13 @@ void getJournalEntries(const string& username, journalAction action)
         }
     }
 
-    cout << ((action == journalAction::open)
+    if (entries.empty())
+    {
+        cout << "No journal entries found\n" << endl;
+        return;
+    }
+
+    cout << ((action == JournalAction::Open)
         ? "Select an entry to open (0 to cancel): \n"
         : "Select an entry to delete (0 to cancel): \n");
 
@@ -181,7 +196,7 @@ void getJournalEntries(const string& username, journalAction action)
 
     fs::path filePath = userPath / format("{}.txt", filename);
 
-    if (action == journalAction::open)
+    if (action == JournalAction::Open)
     {
         ifstream infile(filePath);
         cout << format("{}:\n", displayName);
@@ -196,7 +211,7 @@ void getJournalEntries(const string& username, journalAction action)
         char editChoice{};
         cin >> editChoice;
         cout << endl;
-        cin.ignore();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
         if (editChoice == 'y' || editChoice == 'Y')
         {
@@ -212,12 +227,12 @@ void getJournalEntries(const string& username, journalAction action)
             cout << "\nEntry updated.\n" << endl;
         }
     }
-    else if (action == journalAction::remove)
+    else if (action == JournalAction::Remove)
     {
         cout << "Are you sure you want to delete this entry? (y/n): ";
         char confirm{};
         cin >> confirm;
-        cin.ignore();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
         if (confirm == 'y' || confirm == 'Y')
         {
@@ -227,15 +242,18 @@ void getJournalEntries(const string& username, journalAction action)
     }
 }
 
+
 void viewJournal(const string& username)
 {
-    getJournalEntries(username, journalAction::open);
+    getJournalEntries(username, JournalAction::Open);
 }
+
 
 void deleteJournal(const string& username)
 {
-    getJournalEntries(username, journalAction::remove);
+    getJournalEntries(username, JournalAction::Remove);
 }
+
 
 void changePassword(const string& username)
 {
@@ -273,19 +291,20 @@ void changePassword(const string& username)
         }
         else
         {
-            cout << "Passwords do not match" << endl;
+            cout << "Incorrect password" << endl;
         }
     }
 }
 
-int deleteAccount(const string& username)
+
+DeleteResult deleteAccount(const string& username)
 {
     string choice{};
     cout << "\nAre you sure? (y/n): ";
     cin >> choice;
     cout << endl;
 
-    if (choice == "n" || choice == "N") return 1;
+    if (choice == "n" || choice == "N") return DeleteResult::Cancelled;
 
     fs::path userPath = format("{}'s folder", username);
 
@@ -297,10 +316,14 @@ int deleteAccount(const string& username)
         accounts.erase(username);
         saveAccounts();
         cout << "Account deleted\n" << endl;
-        return 2;
+        cout << "You have been logged out\n" << endl;
+        return DeleteResult::Success;
     }
-    return 0;
+
+    cout << "Error: Account not found\n" << endl;
+    return DeleteResult::Failed;
 }
+
 
 void loggedIn(const string& name)
 {
@@ -337,12 +360,13 @@ void loggedIn(const string& name)
             break;
         case 5:
         {
-            int result = deleteAccount(username);
-            if (result == 1) break;
-            return;
+            DeleteResult result = deleteAccount(username);
+            if (result == DeleteResult::Cancelled) break;
+            if (result == DeleteResult::Success) return;
         }
+            break;
         case 6:
-            cout << "Logged Out\n" << endl;
+            cout << "\nLogged Out\n" << endl;
             return;
         default:
             cout << "Invalid Input\n" << endl;
@@ -350,6 +374,7 @@ void loggedIn(const string& name)
         }
     }
 }
+
 
 void createAccount()
 {
@@ -395,6 +420,7 @@ void createAccount()
     }
 }
 
+
 void logIn()
 {
     int counter{};
@@ -426,22 +452,23 @@ void logIn()
             }
             else
             {
-                cout << "Incorrect password" << endl;
+                cout << "\nIncorrect password" << endl;
             }
         }
         else 
         {
-            cout << "Incorrect Username" << endl;
+            cout << "\nIncorrect Username" << endl;
         }
 
         counter++;
         if (counter >= 3)
         {
-            cout << "Too many failed attempts\n" << endl;
-            break;
+            cout << "\nToo many failed attempts\n" << endl;
+            return;
         }
     }
 }
+
 
 void welcome()
 {
@@ -475,6 +502,7 @@ void welcome()
         }
     }
 }
+
 
 int main()
 {
