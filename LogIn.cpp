@@ -5,6 +5,7 @@
 #include <conio.h>
 #include <fstream>
 #include <filesystem>
+#include<chrono>
 
 using namespace std;
 namespace fs = filesystem;
@@ -140,6 +141,13 @@ void newJournal(const string& username)
     cout << "Journal Entry (Type 'END' on a new line to finish):\n";
     
     ofstream outfile(userPath / (format("{}.txt", filename)));
+
+    auto now = chrono::system_clock::now();
+    auto time = chrono::system_clock::to_time_t(now);
+    tm localTime{};
+    localtime_s(&localTime, &time);
+    outfile << "Date created: " << put_time(&localTime, "%Y-%m-%d %H:%M:%S") << "\n\n";
+
     while (true)
     {
         getline(cin, line);
@@ -148,7 +156,7 @@ void newJournal(const string& username)
     }
 
     outfile.close();
-    cout << "Entry added\n" << endl;
+    cout << "\nEntry added\n" << endl;
 }
 
 
@@ -215,7 +223,20 @@ void getJournalEntries(const string& username, JournalAction action)
 
         if (editChoice == 'y' || editChoice == 'Y')
         {
+            ifstream infile(filePath);
+            string originalDate{};
+            getline(infile, originalDate);
+            infile.close();
+
             ofstream outfile(filePath);
+            outfile << originalDate << '\n';
+
+            auto now = chrono::system_clock::now();
+            auto time = chrono::system_clock::to_time_t(now);
+            tm localTime{};
+            localtime_s(&localTime, &time);
+            outfile << "Date last edited: " << put_time(&localTime, "%Y-%m-%d %H:%M:%S") << "\n\n";
+
             cout << "Enter new content (Type 'END' to finish):\n";
             while (true)
             {
@@ -223,6 +244,7 @@ void getJournalEntries(const string& username, JournalAction action)
                 if (line == "END") break;
                 outfile << line << endl;
             }
+            
             outfile.close();
             cout << "\nEntry updated.\n" << endl;
         }
