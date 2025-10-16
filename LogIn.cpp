@@ -5,7 +5,11 @@
 #include <conio.h>
 #include <fstream>
 #include <filesystem>
-#include<chrono>
+#include <chrono>
+#include <sstream>
+#include <iomanip>
+#include <cstdint>
+#include <ctime>
 
 using namespace std;
 namespace fs = filesystem;
@@ -38,22 +42,48 @@ string getPassword()
     return password;
 }
 
+string simpleHashPassword(const string& password)
+{
+    uint32_t hash = 2166136261u;
+    for (size_t i = 0; i < password.size(); ++i)
+    {
+        uint8_t c = static_cast<uint8_t>(password[i]);
+        hash ^= (c + static_cast<uint8_t>(i));
+        hash *= 16777619u;
+    }
+
+    ostringstream oss{};
+    oss << hex << setw(8) << setfill('0') << hash;
+    return oss.str();
+}
+
+
+string generateSalt()
+{
+    string salt{};
+    for (int i = 0; i < 8; ++i)
+    {
+        salt += static_cast<char>('a' + rand() % 26);
+    }
+    return salt;
+}
+
 
 class account
 {
 private:
     string username;
     string password;
+    string salt;
 public:
-    account(string a, string b) : username(a), password(b) {}
+    account(string a, string b, string c = "") : username(a), password(b), salt(c) {}
 
     string getUsername() const { return username; }
     string getPassword() const { return password; }
+    string getSalt() const { return salt; }
    
-    void setPassword(const string& newPass)
-    {
-        password = newPass;
-    }
+    void setPassword(const string& newPass) { password = newPass; }
+    void setSalt(const string& newSalt) { salt = newSalt; }
 
     void display() const
     {
@@ -71,8 +101,9 @@ void saveAccounts()
 
     for (const auto& pair : accounts)
     {
-        outfile << pair.second.getUsername() << " " 
-                << pair.second.getPassword() << endl;
+        outfile << pair.second.getUsername() << " "
+                << pair.second.getPassword() << " "
+                << pair.second.getSalt() << endl;
     }
 
     outfile.close();
@@ -88,11 +119,11 @@ void loadAccounts()
         return;
     }
 
-    string username{}, password{};
+    string username{}, password{}, salt{};
 
-    while (infile >> username >> password)
+    while (infile >> username >> password >> salt)
     {
-        accounts.emplace(username, account(username, password));
+        accounts.emplace(username, account(username, password, salt));
     }
 
     infile.close();
@@ -277,43 +308,65 @@ void deleteJournal(const string& username)
 }
 
 
+bool isValidPassword(const string& password)
+{
+    return !password.empty() && password.length() >= 6;
+}
+
+
 void changePassword(const string& username)
 {
+    auto it = accounts.find(username);
+    if (it == accounts.end()) return;
+
     while (true)
     {
         cout << "\nTo cancel type 'q'";
         cout << "\nOld Password: ";
         auto it = accounts.find(username);
         string oldPassword = getPassword();
-        if (oldPassword == "q" || oldPassword == "Q")
-        {
-            break;
-        }
-        else if (oldPassword == it->second.getPassword())
-        {
-            while (true)
-            {
-                cout << "New Password: ";
-                string newPassword1 = getPassword();
-                cout << "Confirm New Password: ";
-                string newPassword2 = getPassword();
-                if (newPassword1 == newPassword2)
-                {
-                    it->second.setPassword(newPassword1);
-                    cout << "\nYour Password Has Been Changed\n" << endl;
-                    saveAccounts();
-                    break;
-                }
-                else
-                {
-                    cout << "Passwords do not match\n" << endl;
-                }
-            }
-            break;
-        }
-        else
+        if (oldPassword == "q" || oldPassword == "Q") return;
+
+        string hashedOld = simpleHashPassword(it->second.getSalt() + oldPassword);
+
+        if (hashedOld != it->second.getPassword())
         {
             cout << "Incorrect password" << endl;
+            continue;
+        }
+            
+        while (true)
+        {
+            cout << "New Password: ";
+            string newPassword = getPassword();
+
+            if (newPassword == "q" || newPassword == "Q") return;
+
+            if (!isValidPassword(newPassword))
+            {
+                cout << "\nPassword does not meet requirements\n"
+                    << "Password cannot be empty\n"
+                    << "Password must be at least 6 characters long\n" << endl;
+                continue;
+            }
+
+            cout << "Confirm New Password: ";
+            string confirmPassword = getPassword();
+            if (newPassword != confirmPassword)
+            {
+                cout << "Passwords do not match\n" << endl;
+                continue;
+            }
+                
+            string newSalt = generateSalt();
+            string newHash = simpleHashPassword(newSalt + newPassword);
+
+            it->second.setSalt(newSalt);
+            it->second.setPassword(newHash);
+
+            saveAccounts();
+            cout << "\nYour Password Has Been Changed\n" << endl;
+            return;
         }
     }
 }
@@ -421,9 +474,20 @@ void createAccount()
             password1 = getPassword();
             cout << "Confirm Password: ";
             password2 = getPassword();
+
+            if (!isValidPassword(password1))
+            {
+                cout << "\nPassword does not meet requirements\n"
+                     << "Password cannot be empty\n"
+                     << "Password must be at least 6 characters long\n" << endl;
+                continue;
+            }
+
             if (password1 == password2)
             {
-                accounts.emplace(username, account(username, password1));
+                string salt = generateSalt();
+                string hashed = simpleHashPassword(salt + password1);
+                accounts.emplace(username, account(username, hashed, salt));
                 cout << "\nAccount Created" << endl;
                 cout << endl;
                 saveAccounts();
@@ -466,7 +530,8 @@ void logIn()
         {
             cout << "Password: ";
             password = getPassword();
-            if (it->second.getPassword() == password)
+            string hashedInput = simpleHashPassword(it->second.getSalt() + password);
+            if (it->second.getPassword() == hashedInput)
             {
                 cout << endl;
                 loggedIn(username);
@@ -528,5 +593,6 @@ void welcome()
 
 int main()
 {
+    srand(static_cast<unsigned int>(time(nullptr)));
     welcome();
 }
