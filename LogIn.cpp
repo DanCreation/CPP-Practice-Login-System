@@ -13,6 +13,16 @@
 
 using namespace std;
 namespace fs = filesystem;
+namespace colour
+{
+    const string RESET = "\033[0m";
+    const string RED = "\033[31m";
+    const string GREEN = "\033[32m";
+    const string YELLOW = "\033[33m";
+    const string BLUE = "\033[34m";
+    const string CYAN = "\033[36m";
+    const string BOLD = "\033[1m";
+}
 
 enum class JournalAction { Open, Remove };
 enum class DeleteResult {Cancelled, Failed, Success};
@@ -41,6 +51,7 @@ string getPassword()
     cout << endl;
     return password;
 }
+
 
 string simpleHashPassword(const string& password)
 {
@@ -115,7 +126,7 @@ void loadAccounts()
     ifstream infile("accounts.txt");
     if (!infile)
     {
-        cout << "No saved accounts found" << endl;
+        cout << colour::RED << "No saved accounts found" << endl;
         return;
     }
 
@@ -157,7 +168,8 @@ void newJournal(const string& username)
 
     cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
-    cout << "To cancel type 'q' in Entry Title" << endl;
+    cout << colour::YELLOW << "To cancel type 'q' in Entry Title" 
+         << colour::RESET << endl;
     cout << "Entry Title: ";
     getline(cin, filename);
 
@@ -169,7 +181,9 @@ void newJournal(const string& username)
 
     sanitiseFilename(filename, true);
 
-    cout << "Journal Entry (Type 'END' on a new line to finish):\n";
+    cout << "Journal Entry (" << colour::YELLOW 
+         << "Type 'END' on a new line to finish" 
+         << colour::RESET <<"):\n";
     
     ofstream outfile(userPath / (format("{}.txt", filename)));
 
@@ -187,7 +201,7 @@ void newJournal(const string& username)
     }
 
     outfile.close();
-    cout << "\nEntry added\n" << endl;
+    cout << colour::GREEN << "\nEntry added\n" << endl;
 }
 
 
@@ -207,11 +221,11 @@ void getJournalEntries(const string& username, JournalAction action)
 
     if (entries.empty())
     {
-        cout << "No journal entries found\n" << endl;
+        cout << colour::RED << "No journal entries found\n" << endl;
         return;
     }
 
-    cout << ((action == JournalAction::Open)
+    cout << colour::YELLOW << ((action == JournalAction::Open)
         ? "Select an entry to open (0 to cancel): \n"
         : "Select an entry to delete (0 to cancel): \n");
 
@@ -219,11 +233,11 @@ void getJournalEntries(const string& username, JournalAction action)
     {
         sanitiseFilename(entries[i], false);
 
-        cout << i + 1 << ". " << entries[i] << endl;
+        cout << colour::CYAN << i + 1 << ". " << entries[i] << endl;
     }
 
     int choice{};
-    cout << "Input: ";
+    cout << colour::RESET << "Input: ";
     cin >> choice;
     cout << endl;
 
@@ -246,7 +260,9 @@ void getJournalEntries(const string& username, JournalAction action)
         }
         infile.close();
 
-        cout << "\nWould you like to edit this entry? (y/n): ";
+        cout << colour::YELLOW 
+             << "\nWould you like to edit this entry? (y/n): "
+             << colour::RESET;
         char editChoice{};
         cin >> editChoice;
         cout << endl;
@@ -266,9 +282,12 @@ void getJournalEntries(const string& username, JournalAction action)
             auto time = chrono::system_clock::to_time_t(now);
             tm localTime{};
             localtime_s(&localTime, &time);
-            outfile << "Date last edited: " << put_time(&localTime, "%Y-%m-%d %H:%M:%S") << "\n\n";
+            outfile << "Date last edited: " 
+                    << put_time(&localTime, "%Y-%m-%d %H:%M:%S") << "\n\n";
 
-            cout << "Enter new content (Type 'END' to finish):\n";
+            cout << "Enter new content ("
+                 << colour::YELLOW << "Type 'END' to finish" 
+                 << colour::RESET << "):\n";
             while (true)
             {
                 getline(cin, line);
@@ -277,12 +296,14 @@ void getJournalEntries(const string& username, JournalAction action)
             }
             
             outfile.close();
-            cout << "\nEntry updated.\n" << endl;
+            cout << colour::GREEN << "\nEntry updated.\n" << endl;
         }
     }
     else if (action == JournalAction::Remove)
     {
-        cout << "Are you sure you want to delete this entry? (y/n): ";
+        cout << colour::YELLOW
+             << "Are you sure you want to delete this entry? (y/n): "
+             << colour::RESET;
         char confirm{};
         cin >> confirm;
         cin.ignore(numeric_limits<streamsize>::max(), '\n');
@@ -290,7 +311,7 @@ void getJournalEntries(const string& username, JournalAction action)
         if (confirm == 'y' || confirm == 'Y')
         {
             fs::remove(filePath);
-            cout << "\nEntry deleted.\n" << endl;
+            cout << colour::GREEN << "\nEntry deleted.\n" << endl;
         }
     }
 }
@@ -321,7 +342,7 @@ void changePassword(const string& username)
 
     while (true)
     {
-        cout << "\nTo cancel type 'q'";
+        cout << colour::YELLOW << "\nTo cancel type 'q'" << colour::RESET;
         cout << "\nOld Password: ";
         auto it = accounts.find(username);
         string oldPassword = getPassword();
@@ -331,7 +352,7 @@ void changePassword(const string& username)
 
         if (hashedOld != it->second.getPassword())
         {
-            cout << "Incorrect password" << endl;
+            cout << colour::RED << "\nIncorrect password" << endl;
             continue;
         }
             
@@ -344,9 +365,11 @@ void changePassword(const string& username)
 
             if (!isValidPassword(newPassword))
             {
-                cout << "\nPassword does not meet requirements\n"
-                    << "Password cannot be empty\n"
-                    << "Password must be at least 6 characters long\n" << endl;
+                cout << colour::RED
+                     << "\nPassword does not meet requirements\n"
+                        "Password cannot be empty\n"
+                        "Password must be at least 6 characters long\n\n" 
+                     << colour::RESET;
                 continue;
             }
 
@@ -354,7 +377,8 @@ void changePassword(const string& username)
             string confirmPassword = getPassword();
             if (newPassword != confirmPassword)
             {
-                cout << "Passwords do not match\n" << endl;
+                cout << colour::RED << "\nPasswords do not match\n\n" 
+                     << colour::RESET;
                 continue;
             }
                 
@@ -365,7 +389,7 @@ void changePassword(const string& username)
             it->second.setPassword(newHash);
 
             saveAccounts();
-            cout << "\nYour Password Has Been Changed\n" << endl;
+            cout << colour::GREEN << "\nYour Password Has Been Changed\n\n";
             return;
         }
     }
@@ -375,7 +399,7 @@ void changePassword(const string& username)
 DeleteResult deleteAccount(const string& username)
 {
     string choice{};
-    cout << "\nAre you sure? (y/n): ";
+    cout << colour::YELLOW << "\nAre you sure? (y/n): ";
     cin >> choice;
     cout << endl;
 
@@ -390,12 +414,12 @@ DeleteResult deleteAccount(const string& username)
         fs::remove_all(userPath);
         accounts.erase(username);
         saveAccounts();
-        cout << "Account deleted\n" << endl;
-        cout << "You have been logged out\n" << endl;
+        cout << colour::GREEN << "Account deleted\n"
+                                 "\nYou have been logged out\n" << endl;
         return DeleteResult::Success;
     }
 
-    cout << "Error: Account not found\n" << endl;
+    cout << colour::RED << "Error: Account not found\n" << endl;
     return DeleteResult::Failed;
 }
 
@@ -406,14 +430,18 @@ void loggedIn(const string& name)
     {
         string username{ name };
 
-        cout << format("Welcome {}", name) << endl;
-        cout << "1. Add Journal Entry\n"
-                "2. View Journal Entry\n"
-                "3. Delete Journal Entry\n"
-                "4. Change Password\n"
-                "5. Delete Account\n"
-                "6. Log Out\n"
-                "Input: ";
+        cout << colour::CYAN << "|--------------------------------|\n";
+        cout << "| " << colour::BOLD << format("Welcome {}", name)
+             << colour::RESET << colour::CYAN << "                   | \n";
+        cout << "|--------------------------------|\n"
+                "| 1. Add Journal Entry           |\n"
+                "| 2. View Journal Entry          |\n"
+                "| 3. Delete Journal Entry        |\n"
+                "| 4. Change Password             |\n"
+                "| 5. Delete Account              |\n"
+                "| 6. Log Out                     |\n"
+                "|--------------------------------|\n" << colour::RESET;
+        cout << "Input: ";
 
 
         int input{};
@@ -441,10 +469,10 @@ void loggedIn(const string& name)
         }
             break;
         case 6:
-            cout << "\nLogged Out\n" << endl;
+            cout << colour::GREEN << "\nLogged Out\n" << endl;
             return;
         default:
-            cout << "Invalid Input\n" << endl;
+            cout << colour::RED << "Invalid Input\n" << endl;
             break;
         }
     }
@@ -456,7 +484,10 @@ void createAccount()
     string username{}, password1{}, password2{};
     while (true)
     {
-        cout << "\nCREATE ACCOUNT:\nTo cancel type 'q' in Username" << endl;
+        cout << colour::BLUE << colour::BOLD 
+             << "\nCREATE ACCOUNT:\n" << colour::RESET;
+        cout << colour::YELLOW << "To cancel type 'q' in Username" 
+             << colour::RESET<< endl;
         cout << "Username: ";
         cin >> username;
 
@@ -477,7 +508,7 @@ void createAccount()
 
             if (!isValidPassword(password1))
             {
-                cout << "\nPassword does not meet requirements\n"
+                cout << colour::RED << "\nPassword does not meet requirements\n"
                      << "Password cannot be empty\n"
                      << "Password must be at least 6 characters long\n" << endl;
                 continue;
@@ -488,7 +519,7 @@ void createAccount()
                 string salt = generateSalt();
                 string hashed = simpleHashPassword(salt + password1);
                 accounts.emplace(username, account(username, hashed, salt));
-                cout << "\nAccount Created" << endl;
+                cout << colour::GREEN << "\nAccount Created" << endl;
                 cout << endl;
                 saveAccounts();
                 newDirectory(username);
@@ -496,12 +527,12 @@ void createAccount()
             }
             else
             {
-                cout << "Passwords do not match" << endl;
+                cout << colour::RED << "\nPasswords do not match" << endl;
             }
         }
         else
         {
-            cout << "Username already exists" << endl;
+            cout << colour::RED << "\nUsername already exists" << endl;
         }
     }
 }
@@ -513,7 +544,10 @@ void logIn()
 
     while (true)
     {
-        cout << "\nLOG IN:\nTo cancel type 'q' in Username" << endl;
+        cout << colour::BLUE << colour::BOLD << "\nLOG IN:\n" << colour::RESET;
+        cout << colour::YELLOW << "To cancel type 'q' in Username" 
+             << colour::RESET << endl;
+
         string username{}, password{};
         cout << "Username: ";
         cin >> username;
@@ -539,18 +573,18 @@ void logIn()
             }
             else
             {
-                cout << "\nIncorrect password" << endl;
+                cout << colour::RED << "\nIncorrect password" << endl;
             }
         }
         else 
         {
-            cout << "\nIncorrect Username" << endl;
+            cout << colour::RED << "\nIncorrect Username" << endl;
         }
 
         counter++;
         if (counter >= 3)
         {
-            cout << "\nToo many failed attempts\n" << endl;
+            cout << colour::RED << "\nToo many failed attempts\n" << endl;
             return;
         }
     }
@@ -563,11 +597,14 @@ void welcome()
 
     while (true)
     {
-        cout << "Welcome to the beta test!" << endl;
-        cout << "1. Create An Account\n"
-                "2. Log In\n"
-                "3. Exit\n"
-                "Input: ";
+        cout << colour::CYAN << "|--------------------------------|\n";
+        cout << "| " << colour::BOLD << "Welcome to the beta test!" << colour::RESET << colour::CYAN << "      |\n";
+        cout << "|--------------------------------|\n";
+        cout << "| 1. Create An Account           |\n"
+                "| 2. Log In                      |\n"
+                "| 3. Exit                        |\n"
+                "|--------------------------------|\n" << colour::RESET;
+        cout << "Input: ";
 
         int input{};
         cin >> input;
