@@ -479,7 +479,15 @@ void loggedIn(const string& name)
 
 
         int input{};
-        cin >> input;
+        if (!(cin >> input))
+        {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << colour::RED << "\nInvalid input, please enter a number\n\n"
+                << colour::RESET;
+            clearScreen(screenDelay);
+            continue;
+        }
 
         switch (input)
         {
@@ -507,7 +515,9 @@ void loggedIn(const string& name)
             clearScreen(screenDelay);
             return;
         default:
-            cout << colour::RED << "Invalid Input\n" << endl;
+            cout << colour::RED 
+                 << "\nInvalid Input, plese choose 1, 2, 3, 4, 5, or 6\n\n";
+            clearScreen(screenDelay);
             break;
         }
     }
@@ -647,7 +657,15 @@ void welcome()
         cout << "Input: ";
 
         int input{};
-        cin >> input;
+        if (!(cin >> input))
+        {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << colour::RED << "\nInvalid input, please enter a number\n\n"
+                << colour::RESET;
+            clearScreen(screenDelay);
+            continue;
+        }
 
         switch (input)
         {
@@ -661,7 +679,9 @@ void welcome()
             cout << colour::GREEN << "\nExited" << colour::RESET << endl;
             return;
         default:
-            cout << "Invalid input\n" << endl;
+            cout << colour::RED 
+                 << "\nInvalid input, please choose 1, 2, or 3\n\n";
+            clearScreen(screenDelay);
             break;
         }
     }
