@@ -455,11 +455,18 @@ void loggedIn(const string& name)
         clearScreen();
 
         string username{ name };
+        string welcomeMessage = format("Welcome {}", name);
+
+        if (welcomeMessage.length() > 28)
+            welcomeMessage = welcomeMessage.substr(0, 28);
+
+        int totalWidth = 32;
+        int padding = totalWidth - static_cast<int>(welcomeMessage.length()) - 1;
+
 
         cout << colour::CYAN << "|--------------------------------|\n";
-        cout << "| " << colour::BOLD << format("Welcome {}", name)
-            << colour::RESET;
-        cout << colour::CYAN << "                   | \n"
+        cout << "| " << colour::BOLD << welcomeMessage << colour::RESET;
+        cout << string(padding, ' ') << colour::CYAN << "|\n"
                 "|--------------------------------|\n"
                 "| 1. Add Journal Entry           |\n"
                 "| 2. View Journal Entry          |\n"
@@ -651,7 +658,7 @@ void welcome()
             logIn();
             break;
         case 3:
-            cout << colour::GREEN << "\nExited" << endl;
+            cout << colour::GREEN << "\nExited" << colour::RESET << endl;
             return;
         default:
             cout << "Invalid input\n" << endl;
