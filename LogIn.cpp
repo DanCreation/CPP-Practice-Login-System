@@ -10,6 +10,7 @@
 #include <iomanip>
 #include <cstdint>
 #include <ctime>
+#include <thread>
 
 using namespace std;
 namespace fs = filesystem;
@@ -26,6 +27,22 @@ namespace colour
 
 enum class JournalAction { Open, Remove };
 enum class DeleteResult {Cancelled, Failed, Success};
+
+const int screenDelay = 2000;
+
+
+void clearScreen(int delayMs = 0)
+{
+    if (delayMs > 0)
+        this_thread::sleep_for(chrono::milliseconds(delayMs));
+
+#ifdef _WIN32
+    system("cls");
+#else
+    system("clear");
+#endif
+}
+
 
 string getPassword()
 {
@@ -202,6 +219,7 @@ void newJournal(const string& username)
 
     outfile.close();
     cout << colour::GREEN << "\nEntry added\n" << endl;
+    clearScreen(screenDelay);
 }
 
 
@@ -222,6 +240,7 @@ void getJournalEntries(const string& username, JournalAction action)
     if (entries.empty())
     {
         cout << colour::RED << "No journal entries found\n" << endl;
+        clearScreen(screenDelay);
         return;
     }
 
@@ -297,6 +316,7 @@ void getJournalEntries(const string& username, JournalAction action)
             
             outfile.close();
             cout << colour::GREEN << "\nEntry updated.\n" << endl;
+            clearScreen(screenDelay);
         }
     }
     else if (action == JournalAction::Remove)
@@ -312,6 +332,7 @@ void getJournalEntries(const string& username, JournalAction action)
         {
             fs::remove(filePath);
             cout << colour::GREEN << "\nEntry deleted.\n" << endl;
+            clearScreen(screenDelay);
         }
     }
 }
@@ -390,6 +411,7 @@ void changePassword(const string& username)
 
             saveAccounts();
             cout << colour::GREEN << "\nYour Password Has Been Changed\n\n";
+            clearScreen(screenDelay);
             return;
         }
     }
@@ -416,10 +438,12 @@ DeleteResult deleteAccount(const string& username)
         saveAccounts();
         cout << colour::GREEN << "Account deleted\n"
                                  "\nYou have been logged out\n" << endl;
+        clearScreen(screenDelay);
         return DeleteResult::Success;
     }
 
     cout << colour::RED << "Error: Account not found\n" << endl;
+    clearScreen(screenDelay);
     return DeleteResult::Failed;
 }
 
@@ -428,12 +452,15 @@ void loggedIn(const string& name)
 {
     while (true)
     {
+        clearScreen();
+
         string username{ name };
 
         cout << colour::CYAN << "|--------------------------------|\n";
         cout << "| " << colour::BOLD << format("Welcome {}", name)
-             << colour::RESET << colour::CYAN << "                   | \n";
-        cout << "|--------------------------------|\n"
+            << colour::RESET;
+        cout << colour::CYAN << "                   | \n"
+                "|--------------------------------|\n"
                 "| 1. Add Journal Entry           |\n"
                 "| 2. View Journal Entry          |\n"
                 "| 3. Delete Journal Entry        |\n"
@@ -470,6 +497,7 @@ void loggedIn(const string& name)
             break;
         case 6:
             cout << colour::GREEN << "\nLogged Out\n" << endl;
+            clearScreen(screenDelay);
             return;
         default:
             cout << colour::RED << "Invalid Input\n" << endl;
@@ -521,6 +549,7 @@ void createAccount()
                 accounts.emplace(username, account(username, hashed, salt));
                 cout << colour::GREEN << "\nAccount Created" << endl;
                 cout << endl;
+                clearScreen(screenDelay);
                 saveAccounts();
                 newDirectory(username);
                 return;
@@ -568,6 +597,7 @@ void logIn()
             if (it->second.getPassword() == hashedInput)
             {
                 cout << endl;
+                clearScreen();
                 loggedIn(username);
                 return;
             }
@@ -585,6 +615,7 @@ void logIn()
         if (counter >= 3)
         {
             cout << colour::RED << "\nToo many failed attempts\n" << endl;
+            clearScreen(screenDelay);
             return;
         }
     }
@@ -597,6 +628,8 @@ void welcome()
 
     while (true)
     {
+        clearScreen();
+
         cout << colour::CYAN << "|--------------------------------|\n";
         cout << "| " << colour::BOLD << "Welcome to the beta test!" << colour::RESET << colour::CYAN << "      |\n";
         cout << "|--------------------------------|\n";
@@ -618,7 +651,7 @@ void welcome()
             logIn();
             break;
         case 3:
-            cout << "\nExited" << endl;
+            cout << colour::GREEN << "\nExited" << endl;
             return;
         default:
             cout << "Invalid input\n" << endl;
