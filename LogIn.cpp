@@ -365,7 +365,6 @@ void changePassword(const string& username)
     {
         cout << colour::YELLOW << "\nTo cancel type 'q'" << colour::RESET;
         cout << "\nOld Password: ";
-        auto it = accounts.find(username);
         string oldPassword = getPassword();
         if (oldPassword == "q" || oldPassword == "Q") return;
 
