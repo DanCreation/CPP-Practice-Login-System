@@ -116,42 +116,67 @@ public:
 };
 
 
-unordered_map<string, account> accounts{};
-
-
-void saveAccounts()
+class accountManager
 {
-    ofstream outfile("accounts.txt");
+private: 
+    unordered_map<string, account> accounts{};
+    const string filename = "accounts.txt";
 
-    for (const auto& pair : accounts)
+public:
+    void load()
     {
-        outfile << pair.second.getUsername() << " "
-                << pair.second.getPassword() << " "
-                << pair.second.getSalt() << endl;
+        ifstream infile(filename);
+        if (!infile) return;
+
+        string username, password, salt;
+        while (infile >> username >> password >> salt)
+        {
+            accounts.emplace(username, account(username, password, salt));
+        }
     }
 
-    outfile.close();
-}
 
-
-void loadAccounts()
-{
-    ifstream infile("accounts.txt");
-    if (!infile)
+    void save()
     {
-        cout << colour::RED << "No saved accounts found" << endl;
-        return;
+        ofstream outfile(filename);
+        for (const auto& [_, acc] : accounts)
+        {
+            outfile << acc.getUsername() << " "
+                << acc.getPassword() << " "
+                << acc.getSalt() << endl;
+        }
     }
 
-    string username{}, password{}, salt{};
-
-    while (infile >> username >> password >> salt)
+    
+    bool exists(const string& username) const
     {
-        accounts.emplace(username, account(username, password, salt));
+        return accounts.find(username) != accounts.end();
     }
 
-    infile.close();
-}
+
+    account* find(const string& username)
+    {
+        auto it = accounts.find(username);
+        return it != accounts.end() ? &it->second : nullptr;
+    }
+
+
+    void add(const account& acc)
+    {
+        accounts.emplace(acc.getUsername(), acc);
+        save();
+    }
+
+
+    void remove(const string& username)
+    {
+        accounts.erase(username);
+        save();
+    }
+
+
+    unordered_map<string, account>& getAll() { return accounts; }
+};
 
 
 void newDirectory(const string& directoryName)
@@ -352,10 +377,10 @@ bool isValidPassword(const string& password)
 }
 
 
-void changePassword(const string& username)
+void changePassword(accountManager& manager, const string& username)
 {
-    auto it = accounts.find(username);
-    if (it == accounts.end()) return;
+    account* acc = manager.find(username);
+    if (!acc) return;
 
     while (true)
     {
@@ -364,9 +389,9 @@ void changePassword(const string& username)
         string oldPassword = getPassword();
         if (oldPassword == "q" || oldPassword == "Q") return;
 
-        string hashedOld = simpleHashPassword(it->second.getSalt() + oldPassword);
+        string hashedOld = simpleHashPassword(acc->getSalt() + oldPassword);
 
-        if (hashedOld != it->second.getPassword())
+        if (hashedOld != acc->getPassword())
         {
             cout << colour::RED << "\nIncorrect password" << endl;
             continue;
@@ -376,7 +401,6 @@ void changePassword(const string& username)
         {
             cout << "New Password: ";
             string newPassword = getPassword();
-
             if (newPassword == "q" || newPassword == "Q") return;
 
             if (!isValidPassword(newPassword))
@@ -391,6 +415,7 @@ void changePassword(const string& username)
 
             cout << "Confirm New Password: ";
             string confirmPassword = getPassword();
+
             if (newPassword != confirmPassword)
             {
                 cout << colour::RED << "\nPasswords do not match\n\n" 
@@ -401,10 +426,10 @@ void changePassword(const string& username)
             string newSalt = generateSalt();
             string newHash = simpleHashPassword(newSalt + newPassword);
 
-            it->second.setSalt(newSalt);
-            it->second.setPassword(newHash);
+            acc->setSalt(newSalt);
+            acc->setPassword(newHash);
 
-            saveAccounts();
+            manager.save();
             cout << colour::GREEN << "\nYour Password Has Been Changed\n\n";
             clearScreen(screenDelay);
             return;
@@ -413,7 +438,7 @@ void changePassword(const string& username)
 }
 
 
-DeleteResult deleteAccount(const string& username)
+DeleteResult deleteAccount(accountManager& manager, const string& username)
 {
     string choice{};
     cout << colour::YELLOW << "\nAre you sure? (y/n): ";
@@ -424,13 +449,11 @@ DeleteResult deleteAccount(const string& username)
 
     fs::path userPath = format("{}'s folder", username);
 
-    auto it = accounts.find(username);
 
-    if (it != accounts.end())
+    if (manager.exists(username))
     {
         fs::remove_all(userPath);
-        accounts.erase(username);
-        saveAccounts();
+        manager.remove(username);
         cout << colour::GREEN << "Account deleted\n"
                                  "\nYou have been logged out\n" << endl;
         clearScreen(screenDelay);
@@ -443,14 +466,13 @@ DeleteResult deleteAccount(const string& username)
 }
 
 
-void loggedIn(const string& name)
+void loggedIn(accountManager& manager, const string& username)
 {
     while (true)
     {
         clearScreen();
 
-        string username{ name };
-        string welcomeMessage = format("Welcome {}", name);
+        string welcomeMessage = format("Welcome {}", username);
 
         if (welcomeMessage.length() > 28)
             welcomeMessage = welcomeMessage.substr(0, 28);
@@ -487,20 +509,16 @@ void loggedIn(const string& name)
         switch (input)
         {
         case 1:
-            newJournal(username);
-            break;
+            newJournal(username); break;
         case 2:
-            viewJournal(username);
-            break;
+            viewJournal(username); break;
         case 3:
-            deleteJournal(username);
-            break;
+            deleteJournal(username); break;
         case 4:
-            changePassword(username);
-            break;
+            changePassword(manager, username); break;
         case 5:
         {
-            DeleteResult result = deleteAccount(username);
+            DeleteResult result = deleteAccount(manager, username);
             if (result == DeleteResult::Cancelled) break;
             if (result == DeleteResult::Success) return;
         }
@@ -519,9 +537,10 @@ void loggedIn(const string& name)
 }
 
 
-void createAccount()
+void createAccount(accountManager& manager)
 {
     string username{}, password1{}, password2{};
+
     while (true)
     {
         cout << colour::BLUE << colour::BOLD 
@@ -537,9 +556,7 @@ void createAccount()
             return;
         }
 
-        auto it = accounts.find(username);
-
-        if (it == accounts.end())
+        if (!manager.exists(username))
         {
             cout << "Password: ";
             password1 = getPassword();
@@ -554,22 +571,21 @@ void createAccount()
                 continue;
             }
 
-            if (password1 == password2)
-            {
-                string salt = generateSalt();
-                string hashed = simpleHashPassword(salt + password1);
-                accounts.emplace(username, account(username, hashed, salt));
-                cout << colour::GREEN << "\nAccount Created" << endl;
-                cout << endl;
-                clearScreen(screenDelay);
-                saveAccounts();
-                newDirectory(username);
-                return;
-            }
-            else
+            if (password1 != password2)
             {
                 cout << colour::RED << "\nPasswords do not match" << endl;
+                continue;
             }
+
+            string salt = generateSalt();
+            string hashed = simpleHashPassword(salt + password1);
+            manager.add(account(username, hashed, salt));
+
+            cout << colour::GREEN << "\nAccount Created" << endl;
+            cout << endl;
+            clearScreen(screenDelay);
+            newDirectory(username);
+            return;
         }
         else
         {
@@ -579,7 +595,7 @@ void createAccount()
 }
 
 
-void logIn()
+void logIn(accountManager& manager)
 {
     int counter{};
 
@@ -599,18 +615,20 @@ void logIn()
             return;
         }
 
-        auto it = accounts.find(username);
+        account* acc = manager.find(username);
 
-        if (it != accounts.end())
+        if (acc)
         {
             cout << "Password: ";
             password = getPassword();
-            string hashedInput = simpleHashPassword(it->second.getSalt() + password);
-            if (it->second.getPassword() == hashedInput)
+
+            string hashedInput = simpleHashPassword(acc->getSalt() + password);
+
+            if (hashedInput == acc->getPassword())
             {
                 cout << endl;
                 clearScreen();
-                loggedIn(username);
+                loggedIn(manager, username);
                 return;
             }
             else
@@ -636,7 +654,8 @@ void logIn()
 
 void welcome()
 {
-    loadAccounts();
+    accountManager manager;
+    manager.load();
 
     while (true)
     {
@@ -665,11 +684,9 @@ void welcome()
         switch (input)
         {
         case 1:
-            createAccount();
-            break;
+            createAccount(manager); break;
         case 2:
-            logIn();
-            break;
+            logIn(manager); break;
         case 3:
             cout << colour::GREEN << "\nExited" << colour::RESET << endl;
             return;
