@@ -36,11 +36,7 @@ void clearScreen(int delayMs = 0)
     if (delayMs > 0)
         this_thread::sleep_for(chrono::milliseconds(delayMs));
 
-#ifdef _WIN32
-    system("cls");
-#else
-    system("clear");
-#endif
+    cout << "\033[2J\033[1;1H";
 }
 
 
